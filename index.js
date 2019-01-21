@@ -9,20 +9,19 @@ const token = require('./token.js')
 const colors = ['#f99266', '#fbb773', '#fbcc86', '#f6e57d', '#ccee82']
 const randomColor = str => chalk.hex(colors[Math.floor(Math.random() * 5)])(str)
 
-// This should be cached a while. jwks is not updated very often by the identity provider
-// Calling this each time verifying a token will cause unnecessary traffic to HID
-// Should be set up in the functions index file, if not this might be recreated on each call anyways and the cache will be very effective
+// This should be cached a while. jwks is (hopefully) not updated very often by the OIDC provider
+// Calling this each time verifying a token will cause unnecessary traffic to the OIDC provider
 const client = jwksClient({
   cache: true,
   rateLimit: true,
   jwksRequestsPerMinute: 10, // Default value
   cacheMaxEntries: 5, // Default value
   cacheMaxAge: 36000000, // 10hours, Default value
-  jwksUri: 'https://hid.dev-hafslundnett.io/.well-known/openid-configuration/jwks'
+  jwksUri: 'https://example.com/.well-known/openid-configuration/jwks'
 })
 
 // This function is called internally by jwt.verify
-// Gets the signing key from HID in order to be able to verify the given token
+// Gets the signing key from OIDC provider in order to be able to verify the given token
 function getKey (header, callback) {
   client.getSigningKey(header.kid, function (err, key) {
     if (err) {
@@ -34,12 +33,12 @@ function getKey (header, callback) {
   })
 }
 
-// Tokens from HID are signed with RS256 algorithm
+// Set correct algorithm
 const opts = {
   algorithms: ['RS256']
 }
 
-// Verify token (id_token is the one containing bankid_pid, not access_token)
+// Verify token
 jwt.verify(token, getKey, opts, function (err, decoded) {
   if (err) {
     spinner.fail('Failed token verification')
